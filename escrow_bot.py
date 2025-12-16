@@ -35,11 +35,11 @@ ADMIN_IDS_STR = os.getenv("ADMIN_IDS", "7472359048,7880967664,8453993167,2001575
 ADMIN_IDS = [int(admin_id.strip()) for admin_id in ADMIN_IDS_STR.split(",") if admin_id.strip()]
 
 # Blockchain API keys
-BSCSCAN_API_KEY = os.getenv("BSCSCAN_API_KEY", "")
-TRONGRID_API_KEY = os.getenv("TRONGRID_API_KEY", "")
+BSCSCAN_API_KEY = os.getenv("1JPI1W7W26UICIYDQNAEE2M1D7A7B3IUIS", "")
+TRONGRID_API_KEY = os.getenv("a1743d3b-46da-44b8-9a61-6934ffa7edfe", "")
 
 # Logs channel ID (where group creation logs will be sent)
-LOGS_CHANNEL_ID_STR = os.getenv("LOGS_CHANNEL_ID", "")
+LOGS_CHANNEL_ID_STR = os.getenv("-1003266978268", "")
 try:
     LOGS_CHANNEL_ID = int(LOGS_CHANNEL_ID_STR) if LOGS_CHANNEL_ID_STR else None
 except (ValueError, TypeError):
