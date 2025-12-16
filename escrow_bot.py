@@ -23,12 +23,12 @@ import psycopg2.extras
 import pickle
 
 # Bot token from environment variable
-BOT_TOKEN = os.getenv("ESCROW_BOT_TOKEN", "")
+BOT_TOKEN = os.getenv("7951713514:AAFhCbUODodyJYyvJqnNJJWqyWMLozX0JBk", "")
 
 # Pyrogram user client credentials
-API_ID = os.getenv("TELEGRAM_API_ID", "")
-API_HASH = os.getenv("TELEGRAM_API_HASH", "")
-PHONE = os.getenv("TELEGRAM_PHONE", "")
+API_ID = os.getenv("26360975", "")
+API_HASH = os.getenv("6de01e30d62ce2220eea62c17485e7f7", "")
+PHONE = os.getenv("+919234993722", "")
 
 # Admin user IDs (comma-separated)
 ADMIN_IDS_STR = os.getenv("ADMIN_IDS", "7472359048,7880967664,8453993167,2001575810,5825027777,6864194951,8093808661,5229586098,7422906767,7962772947,1166772148,7279906688,1870644348,7338429782,8034627772,7090417167,6526824979,8004116104,7715451354")
