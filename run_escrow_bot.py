@@ -52,9 +52,9 @@ def main():
     print("✅ PagaL Escrow Bot is running...")
     
     # Print configuration diagnostics
-    bscscan_key = os.getenv("BSCSCAN_API_KEY", "")
-    trongrid_key = os.getenv("TRONGRID_API_KEY", "")
-    logs_channel_id = os.getenv("LOGS_CHANNEL_ID", "")
+    bscscan_key = os.getenv("1JPI1W7W26UICIYDQNAEE2M1D7A7B3IUIS", "")
+    trongrid_key = os.getenv("a1743d3b-46da-44b8-9a61-6934ffa7edfe", "")
+    logs_channel_id = os.getenv("-1003266978268", "")
     
     if bscscan_key and trongrid_key:
         print("✅ Blockchain monitoring enabled (BSC & TRON)")
