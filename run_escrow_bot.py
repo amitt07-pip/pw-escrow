@@ -10,7 +10,7 @@ if sys.version_info >= (3, 13):
     sys.modules["imghdr"] = types.ModuleType("imghdr")
 
 def main():
-    escrow_token = os.getenv("ESCROW_BOT_TOKEN")
+    escrow_token = os.getenv("7951713514:AAFhCbUODodyJYyvJqnNJJWqyWMLozX0JBk")
     if not escrow_token:
         print("❌ ERROR: ESCROW_BOT_TOKEN not set!")
         sys.exit(1)
