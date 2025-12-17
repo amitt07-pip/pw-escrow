@@ -1,27 +1,34 @@
-"""
-Run PagaL Escrow Bot only
-"""
-import asyncio
-import sys
-import types
 import os
+import sys
+import asyncio
+from pathlib import Path
 
-if sys.version_info >= (3, 13):
-    sys.modules["imghdr"] = types.ModuleType("imghdr")
+from dotenv import load_dotenv
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    CallbackQueryHandler,
+    ChatMemberHandler,
+)
 
+# ---------------- LOAD ENV ----------------
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
+
+# ---------------- MAIN ----------------
 def main():
-    escrow_token = os.getenv("7951713514:AAFhCbUODodyJYyvJqnNJJWqyWMLozX0JBk")
-    if not escrow_token:
-        print("❌ ERROR: ESCROW_BOT_TOKEN not set!")
+    token = os.getenv("ESCROW_BOT_TOKEN")
+    if not token:
+        print("❌ ESCROW_BOT_TOKEN not set")
         sys.exit(1)
-    
+
     print("✅ PagaL Escrow Bot (@PagaLEscrowBot) - Starting...")
-    
+
     import escrow_bot
-    from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ChatMemberHandler
-    
-    app = ApplicationBuilder().token(escrow_token).build()
-    
+
+    app = ApplicationBuilder().token(token).build()
+
+    # -------- HANDLERS --------
     app.add_handler(CommandHandler("start", escrow_bot.start_command))
     app.add_handler(CommandHandler("menu", escrow_bot.menu_command))
     app.add_handler(CommandHandler("escrow", escrow_bot.escrow_command))
@@ -31,44 +38,38 @@ def main():
     app.add_handler(CommandHandler("seller", escrow_bot.seller_command))
     app.add_handler(CommandHandler("token", escrow_bot.token_command))
     app.add_handler(CommandHandler("deposit", escrow_bot.deposit_command))
-    app.add_handler(CommandHandler("balance", escrow_bot.balance_command))
-    app.add_handler(CommandHandler("addbalance", escrow_bot.addbalance_command))
-    app.add_handler(CommandHandler("add", escrow_bot.add_command))
-    app.add_handler(CommandHandler("fakedepo", escrow_bot.fakedepo_command))
-    app.add_handler(CommandHandler("link", escrow_bot.link_command))
-    app.add_handler(CommandHandler("blacklist", escrow_bot.blacklist_command))
-    app.add_handler(CommandHandler("leave", escrow_bot.leave_command))
-    app.add_handler(CommandHandler("verify", escrow_bot.verify_command))
-    app.add_handler(CommandHandler("release", escrow_bot.release_command))
-    app.add_handler(CommandHandler("refund", escrow_bot.refund_command))
+
     app.add_handler(CallbackQueryHandler(escrow_bot.button_callback))
-    app.add_handler(ChatMemberHandler(escrow_bot.track_chat_members, ChatMemberHandler.CHAT_MEMBER))
-    
-    async def post_init(application):
-        asyncio.create_task(escrow_bot.monitor_deposits(application))
-    
-    app.post_init = post_init
-    
-    print("✅ PagaL Escrow Bot is running...")
-    
-    # Print configuration diagnostics
-    bscscan_key = os.getenv("1JPI1W7W26UICIYDQNAEE2M1D7A7B3IUIS", "")
-    trongrid_key = os.getenv("a1743d3b-46da-44b8-9a61-6934ffa7edfe", "")
-    logs_channel_id = os.getenv("-1003266978268", "")
-    
-    if bscscan_key and trongrid_key:
+    app.add_handler(
+        ChatMemberHandler(
+            escrow_bot.track_chat_members,
+            ChatMemberHandler.CHAT_MEMBER,
+        )
+    )
+
+
+    # -------- CONFIG DIAGNOSTICS --------
+    bsc = os.getenv("BSCSCAN_API_KEY")
+    tron = os.getenv("TRONGRID_API_KEY")
+    logs = os.getenv("LOGS_CHANNEL_ID")
+
+    if bsc and tron:
         print("✅ Blockchain monitoring enabled (BSC & TRON)")
     else:
-        print("⚠️  Blockchain monitoring disabled (API keys not configured)")
-    
-    if logs_channel_id:
-        print(f"✅ Logs channel configured: {logs_channel_id}")
-    else:
-        print("⚠️  Logs channel not configured (LOGS_CHANNEL_ID not set)")
-    
-    print("✅ Bot is now polling for updates...")
-    
-    app.run_polling()
+        print("⚠️ Blockchain monitoring disabled")
 
+    if logs:
+        print(f"✅ Logs channel configured: {logs}")
+    else:
+        print("⚠️ Logs channel not configured")
+
+    print("✅ Bot is now polling for updates...")
+
+    # 🔥 THIS LINE KEEPS THE PROCESS ALIVE
+    app.run_polling(close_loop=False)
+
+
+# ---------------- ENTRY ----------------
 if __name__ == "__main__":
     main()
+

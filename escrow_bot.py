@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 import sys
 import types
 if sys.version_info >= (3, 13):
@@ -21,6 +24,53 @@ import json
 import psycopg2
 import psycopg2.extras
 import pickle
+from pyrogram import Client
+from pyrogram.errors import RPCError
+
+# ---------------- PYROGRAM CLIENT ----------------
+API_ID = int(os.getenv("TELEGRAM_API_ID"))
+API_HASH = os.getenv("TELEGRAM_API_HASH")
+
+pyro_app = Client(
+    "escrow_user_session",
+    api_id=API_ID,
+    api_hash=API_HASH,
+)
+
+_pyro_started = False
+
+
+async def ensure_pyrogram_started():
+    global _pyro_started
+    if not _pyro_started:
+        await pyro_app.start()
+        _pyro_started = True
+        print("✅ Pyrogram user session started")
+
+async def create_escrow_group(buyer_id: int, seller_id: int, title: str):
+    await ensure_pyrogram_started()
+
+    try:
+        chat = await pyro_app.create_supergroup(
+            title=title,
+            description="🔐 PagaL Escrow Transaction Group"
+        )
+
+        await pyro_app.add_chat_members(
+            chat_id=chat.id,
+            user_ids=[buyer_id, seller_id]
+        )
+
+        print(f"✅ Escrow group created: {chat.id}")
+        return chat.id
+
+    except RPCError as e:
+        print("❌ Pyrogram RPC error during group creation:", e)
+        raise
+
+    except Exception as e:
+        print("❌ Unexpected error during group creation:", e)
+        raise
 
 # Bot token from environment variable
 BOT_TOKEN = os.getenv("7951713514:AAFhCbUODodyJYyvJqnNJJWqyWMLozX0JBk", "")
@@ -268,7 +318,20 @@ def generate_group_photo(buyer_username, seller_username):
         print(f"Error generating group photo: {e}")
         return None
 
+from telegram.error import Forbidden
+
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        await update.message.reply_text(
+            welcome_message,
+            parse_mode='Markdown',
+            disable_web_page_preview=True,
+            reply_markup=reply_markup
+        )
+    except Forbidden:
+        # User has blocked the bot — ignore silently
+        print(f"⚠️ User {update.effective_user.id} has blocked the bot")
+
     """Handle /start command"""
     welcome_message = """💫 @PagaLEscrowBot 💫
 Your Trustworthy Telegram Escrow Service
@@ -404,30 +467,34 @@ async def dd_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         escrow_roles[chat_id]['deal_complete'] = False
         save_escrow_roles(escrow_roles)
     
-    # Check if this is a group
-    if chat.type in ['group', 'supergroup']:
-        try:
-            # Generate random 8-digit number starting with 9
-            random_number = random.randint(90000000, 99999999)
-            
-            # Get current title to determine group type
-            current_title = chat.title
-            
-            # Only update if the title doesn't already have a number in parentheses
-            if "(" not in current_title:
-                # Determine escrow type based on current title
-                if "P2P" in current_title:
-                    new_title = f"P2P Escrow By PAGAL Bot ({random_number})"
-                elif "OTC" in current_title:
-                    new_title = f"OTC Escrow By PAGAL Bot ({random_number})"
-                else:
-                    new_title = f"Product Deal Escrow By PAGAL Bot ({random_number})"
-                
-                # Rename the group
-                await context.bot.set_chat_title(chat_id=chat_id, title=new_title)
-                print(f"✅ Changed group title to: {new_title}")
-        except Exception as e:
-            print(f"❌ Failed to change group title: {e}")
+# Check if this is a group
+if chat.type in ['group', 'supergroup']:
+    try:
+        # Generate random 8-digit number starting with 9
+        random_number = random.randint(90000000, 99999999)
+
+        # Get current title to determine group type
+        current_title = chat.title
+
+        # Only update if the title doesn't already have a number in parentheses
+        if "(" not in current_title:
+            # Determine escrow type based on current title
+            if "P2P" in current_title:
+                new_title = f"P2P Escrow By PAGAL Bot ({random_number})"
+            elif "OTC" in current_title:
+                new_title = f"OTC Escrow By PAGAL Bot ({random_number})"
+            else:
+                new_title = f"Product Deal Escrow By PAGAL Bot ({random_number})"
+
+            # Rename the group
+            await context.bot.set_chat_title(
+                chat_id=chat.id,
+                title=new_title
+            )
+            print(f"✓ Changed group title to: {new_title}")
+
+    except Exception as e:
+        print(f"✗ Failed to change group title: {e}")
     
     # Check if this is an OTC group
     is_otc_group = "OTC" in chat.title if chat.title else False
@@ -603,36 +670,8 @@ Start sharing and enjoy CRAZY fee discounts! 🎉"""
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await query.edit_message_text(invites_message, reply_markup=reply_markup)
-    
-    elif query.data == "escrow_p2p":
-        await query.answer()
-        await query.edit_message_text("**Creating a safe trading place for you please wait, please wait...**", parse_mode='Markdown')
-        
-        if not user_client:
-            error_msg = "❌ Group creation is not configured. Please contact the bot administrator."
-            await query.edit_message_text(error_msg)
-            return
-        
-        try:
-            # Start user client if not started
-            if not user_client.is_connected:
-                await user_client.start()
+
             
-            # Get user info
-            user = query.from_user
-            
-            # Generate random 8-digit number starting with 9 (will be added to title after /buyer or /seller)
-            random_number = random.randint(90000000, 99999999)
-            group_name = f"P2P Escrow By PAGAL Bot"
-            
-            # Create a supergroup (doesn't require initial members)
-            supergroup = await user_client.create_supergroup(
-                title=group_name,
-                description=""
-            )
-            
-            # Small delay to ensure group is fully created
-            await asyncio.sleep(2)
             
             # Add the bot to the group
             bot_username = (await context.bot.get_me()).username
@@ -646,25 +685,9 @@ Start sharing and enjoy CRAZY fee discounts! 🎉"""
                 escrow_roles[bot_chat_id] = {}
             escrow_roles[bot_chat_id]['transaction_id'] = random_number
             
-            # Small delay before promoting
-            await asyncio.sleep(1)
-            
-            # Promote bot to admin with full permissions
-            await user_client.promote_chat_member(
-                chat_id=supergroup.id,
-                user_id=bot_username,
-                privileges=ChatPrivileges(
-                    can_manage_chat=True,
-                    can_delete_messages=True,
-                    can_manage_video_chats=True,
-                    can_restrict_members=True,
-                    can_promote_members=True,
-                    can_change_info=True,
-                    can_invite_users=True,
-                    can_pin_messages=True,
-                    is_anonymous=False
-                )
-            )
+
+      )
+   )
             
             # Promote user to anonymous admin temporarily to send message on behalf of group
             me = await user_client.get_me()
@@ -748,8 +771,45 @@ Start sharing and enjoy CRAZY fee discounts! 🎉"""
         except Exception as e:
             error_message = f"❌ Failed to create escrow group.\n\nPlease try again or contact support.\n\nError: {str(e)}"
             await query.edit_message_text(error_message)
-    
-    elif query.data == "escrow_product":
+async def button_callback(update, context):
+    query = update.callback_query
+    await query.answer()
+
+# STEP-2    
+if query.data == "escrow_p2p":
+    try:
+        await ensure_user_client()
+
+        supergroup = await user_client.create_supergroup(
+            title=group_name,
+            description="PagaL Escrow P2P Group"
+        )
+
+    except Exception as e:
+        await query.edit_message_text(
+            f"❌ Group creation failed.\nPyrogram error: {e}"
+        )
+        return
+
+
+lif query.data == "escrow_product":
+    try:
+        await ensure_user_client()
+
+        supergroup = await user_client.create_supergroup(
+            title=group_name,
+            description="PagaL Escrow Product Group"
+        )
+
+    except Exception as e:
+        await query.edit_message_text(
+            f"❌ Group creation failed.\nPyrogram error: {e}"
+        )
+        return
+
+
+    # continue group creation here
+
         await query.answer()
         await query.edit_message_text("**Creating a safe trading place for you please wait, please wait...**", parse_mode='Markdown')
         
@@ -763,8 +823,7 @@ Start sharing and enjoy CRAZY fee discounts! 🎉"""
             if not user_client.is_connected:
                 await user_client.start()
             
-            # Get user info
-            user = query.from_user
+          
             
             # Generate random 8-digit number starting with 9 (will be added to title after /buyer or /seller)
             random_number = random.randint(90000000, 99999999)
